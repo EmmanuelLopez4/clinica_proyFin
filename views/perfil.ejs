@@ -1,0 +1,63 @@
+<%- include ("templates/header.ejs", {titulo: titulo}) %>
+
+<div class="container my-5" style="max-width: 800px;">
+    <h1 class="mb-4">Información de la Sesión y Perfil</h1>
+
+    <div class="row">
+        
+        <div class="col-md-4 text-center">
+            <div class="card shadow-sm p-3">
+                <h5 class="mb-3">Foto de Perfil</h5>
+                
+                <img src="/images/<%= user.fotoPerfil %>" 
+                     class="img-fluid rounded-circle mb-3 border border-primary" 
+                     style="width: 150px; height: 150px; object-fit: cover;">
+                
+                <p class="text-muted"><%= user.username %></p>
+            </div>
+            
+            <div class="card shadow-sm p-3 mt-3">
+                 <h5 class="mb-3">Cambiar Foto</h5>
+                 <form action="/perfil/actualizarFoto" method="POST" enctype="multipart/form-data">
+                     <input type="file" name="fotoPerfil" required class="form-control mb-3">
+                     <button type="submit" class="btn btn-warning btn-sm col-12">Subir / Cambiar</button>
+                 </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Datos de la Sesión y Acceso</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Usuario (Username):</strong> <%= user.username %>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Rol de Acceso:</strong> 
+                            <span class="badge bg-<%= user.role === 'administrador' ? 'danger' : 'success' %>">
+                                <%= user.role.toUpperCase() %>
+                            </span>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>ID de Usuario:</strong> 
+                            <small><%= user._id %></small>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Nombre del Archivo:</strong> 
+                            <small><%= user.fotoPerfil %></small>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer text-end">
+                    <a href="/" class="btn btn-secondary">Ir al Home</a>
+                    <a href="/logout" class="btn btn-danger">Cerrar Sesión</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("templates/flooter.ejs") %>

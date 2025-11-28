@@ -8,14 +8,18 @@ const usuarioSchema = new mongoose.Schema({
 		trim: true,
 	},
 	password: {
-		type: String,
+		type: String, 
 		required: true,
 	},
 	role: {
 		type: String,
 		enum: ['normal', 'administrador'],
 		default: 'normal',
-	}
+	},
+    fotoPerfil: { 
+        type: String,
+        default: 'perfil_default.png' 
+    }
 })
 
 export default mongoose.model("Usuario", usuarioSchema)
