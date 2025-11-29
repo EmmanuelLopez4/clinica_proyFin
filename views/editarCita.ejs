@@ -1,17 +1,21 @@
-<%- include("templates/header.ejs", {titulo: "Modificar Cita"}) %>
+<%- include ("templates/header.ejs", {titulo: "Modificar Cita"}) %>
 
     <div class="container my-4">
         <h2>Modificar Cita Programada</h2>
         <p class="text-muted">Editando cita con ID: <%= cita._id %></p>
         
-        <form action="/api/citas/editar" method="POST">
+        <form action="/api/citas/editar/<%= cita._id %>" method="POST">
             <input type="hidden" name="id" value="<%= cita._id %>">
 
             <div class="mb-3">
                 <label for="paciente" class="form-label">ID Paciente</label>
                 <input class="form-control" type="text" name="paciente" id="paciente" 
-                       value="<%= cita.paciente._id %>" required>
-                <small class="form-text text-muted">Paciente actual: **<%= cita.paciente.firstName %> <%= cita.paciente.lastName %>**</small>
+                       value="<%= cita.paciente ? cita.paciente._id : '' %>" required>
+                
+                <small class="form-text text-muted">
+                    Paciente actual: 
+                    **<%= cita.paciente ? (cita.paciente.firstName + ' ' + cita.paciente.lastName) : '¡Paciente no asociado!' %>**
+                </small>
             </div>
 
             <div class="mb-3">
@@ -20,15 +24,25 @@
                        value="<%= cita.dentist %>" required>
             </div>
 
-            <div class="mb-3">
-                <label for="date" class="form-label">Fecha (dd/mm/aaaa)</label>
+            <div class="row mb-3">
                 <% 
-                    // Formateamos la fecha existente a dd/mm/aaaa para mostrarla en el campo de texto
                     const dbDate = new Date(cita.date);
-                    const formattedDate = dbDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const formattedDate = dbDate.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                    // Formato para el input de hora (HH:mm)
+                    const formattedTime = dbDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
                 %>
-                <input class="form-control" type="text" name="date" id="date" 
-                       value="<%= formattedDate %>" placeholder="dd/mm/aaaa" required>
+                
+                <div class="col-6">
+                    <label for="date" class="form-label">Fecha (dd/mm/aaaa)</label>
+                    <input class="form-control" type="text" name="date" id="date" 
+                           value="<%= formattedDate %>" placeholder="dd/mm/aaaa" required>
+                </div>
+
+                <div class="col-6">
+                    <label for="time" class="form-label">Hora (HH:mm)</label>
+                    <input class="form-control" type="text" name="time" id="time" 
+                           value="<%= formattedTime %>" placeholder="HH:mm" required>
+                </div>
             </div>
 
             <button type="submit" class="btn btn-warning">Guardar Cambios</button>
@@ -36,4 +50,4 @@
         </form>
     </div>
 
-<%- include("templates/flooter.ejs") %>
+<%- include ("templates/flooter.ejs") %>

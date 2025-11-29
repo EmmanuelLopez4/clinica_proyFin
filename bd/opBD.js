@@ -1,21 +1,18 @@
 import Paciente from "../models/paciente.js";
 import Cita from "../models/cita.js";
-import Usuario from "../models/usuario.js"; // Necesario para actualizar la foto
+import Usuario from "../models/usuario.js"; 
 import fs from 'fs'; 
 import path from 'path'; 
 
 // ===================================
-// LÓGICA DE GESTIÓN DE ARCHIVOS (NUEVO)
+// LÓGICA DE GESTIÓN DE ARCHIVOS Y ROLES
 // ===================================
 
-// 🎯 Función para borrar el archivo físico (CRUCIAL para liberar espacio)
 export function borrarArchivoFisico(nombreArchivo) {
     if (!nombreArchivo || nombreArchivo === 'perfil_default.png') {
         return; 
     }
     
-    // Construye la ruta completa del archivo
-    // path.join usa el directorio actual (process.cwd), 'web', 'images', y el nombre
     const rutaArchivo = path.join(process.cwd(), 'web', 'images', nombreArchivo);
     
     try {
@@ -28,23 +25,56 @@ export function borrarArchivoFisico(nombreArchivo) {
     }
 }
 
-// 🎯 Función para actualizar la foto de perfil del usuario
 export async function actualizarFotoPerfil(userId, nombreArchivo) {
-    // 1. Obtener el usuario actual para saber si ya tenía una foto
     const user = await Usuario.findById(userId);
     if (!user) return;
     
-    // 2. Borrar la foto anterior (si existe y no es la de defecto)
     borrarArchivoFisico(user.fotoPerfil);
     
-    // 3. Actualizar el campo en la BD con el nuevo nombre
     await Usuario.findByIdAndUpdate(userId, { fotoPerfil: nombreArchivo });
+}
+
+export async function obtenerDoctores() {
+    const doctoresBD = await Usuario.find({ role: 'administrador' }).select('username'); 
+    return doctoresBD;
+}
+
+export async function obtenerTodosUsuarios() {
+    const usuariosBD = await Usuario.find().select('-password'); 
+    return usuariosBD;
+}
+
+export async function actualizarRolUsuario(userId, nuevoRol) {
+    const usuarioActualizado = await Usuario.findByIdAndUpdate(
+        userId, 
+        { role: nuevoRol }, 
+        { new: true }
+    );
+    return usuarioActualizado;
 }
 
 
 // ===================================
 // CRUD: PACIENTES
 // ===================================
+
+// 🎯 FUNCIÓN DE BÚSQUEDA NUEVA (Usada por el Admin en /citas)
+export async function buscarPacientesPorNombre(nombreBusqueda) {
+    if (!nombreBusqueda) return [];
+    
+    // Crea una expresión regular para búsqueda insensible a mayúsculas/minúsculas
+    const regex = new RegExp(nombreBusqueda, 'i');
+    
+    // Busca en firstName (username) o lastName
+    const pacientesEncontrados = await Paciente.find({
+        $or: [
+            { firstName: regex },
+            { lastName: regex },
+        ]
+    }).select('-__v'); 
+    
+    return pacientesEncontrados;
+}
 
 export async function crearPaciente(datosPaciente) {
     const paciente = new Paciente(datosPaciente);
@@ -53,19 +83,6 @@ export async function crearPaciente(datosPaciente) {
 }
 
 export async function obtenerPacientes(query = {}) {
-    if (query.q) {
-        const busqueda = new RegExp(query.q, 'i');
-        const pacientesBD = await Paciente.find({
-            $or: [
-                { firstName: busqueda },
-                { lastName: busqueda },
-                { phone: busqueda },
-                { email: busqueda }
-            ]
-        });
-        return pacientesBD;
-    }
-    
     const pacientesBD = await Paciente.find();
     return pacientesBD;
 }
@@ -89,6 +106,16 @@ export async function crearCita(datosCita) {
     const cita = new Cita(datosCita);
     const respuestaMongo = await cita.save();
     return respuestaMongo;
+}
+
+export async function obtenerCitasPorDoctor(doctorUsername) {
+    const citasBD = await Cita.find({ dentist: doctorUsername }).populate('paciente');
+    return citasBD;
+}
+
+export async function obtenerCitasPorPaciente(pacienteId) {
+    const citasBD = await Cita.find({ paciente: pacienteId }).populate('paciente');
+    return citasBD;
 }
 
 export async function obtenerCitas() {

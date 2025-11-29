@@ -1,11 +1,34 @@
 import { Router } from "express"; 
 import * as opBD from "../bd/opBD.js"; 
-import rutasP from "./rutasP.js";
 import rutasC from "./rutasC.js"; 
 import Usuario from "../models/usuario.js"; 
-import { subirArchivo } from "../middlewares/subirArchivos.js"; // ⬅️ NUEVO: Importar middleware de Multer
+import { subirArchivo } from "../middlewares/subirArchivos.js";
 
 const router = Router(); 
+
+// ===================================================
+// UTILIDAD: CONVERSIÓN DE FECHA Y HORA 
+// ===================================================
+
+export function convertirFechaISO(fechaString, horaString) {
+    if (!fechaString || !horaString) return null;
+    
+    const partesFecha = fechaString.split('/');
+    if (partesFecha.length !== 3) return null;
+
+    const dia = partesFecha[0];
+    const mes = partesFecha[1];
+    const anio = partesFecha[2];
+
+    // Corregido: Usa la hora local sin la Z
+    const fechaISO = new Date(`${anio}-${mes}-${dia}T${horaString}:00`); 
+
+    if (isNaN(fechaISO.getTime())) {
+        return null; 
+    }
+    return fechaISO;
+}
+
 
 // ===================================================
 // MIDDLEWARE DE AUTENTICACIÓN Y AUTORIZACIÓN 
@@ -28,33 +51,16 @@ function verificarAdministrador(req, res, next) {
     }
 }
 
-function convertirFechaISO(fechaString) {
-    if (!fechaString) return null;
-    const partes = fechaString.split('/');
-    if (partes.length === 3) {
-        const dia = partes[0];
-        const mes = partes[1];
-        const anio = partes[2];
-        const fechaISO = new Date(`${anio}-${mes}-${dia}T00:00:00.000Z`);
-        if (!isNaN(fechaISO)) {
-            return fechaISO;
-        }
-    }
-    return fechaString; 
-}
-
 
 // ===================================================
-// RUTAS DE AUTENTICACIÓN (LOGIN, LOGOUT)
+// RUTAS DE AUTENTICACIÓN (LOGIN, REGISTRO, LOGOUT)
 // ===================================================
 
-// Vista del formulario de Login
 router.get("/login", (req, res) => {
     if (req.session.userId) return res.redirect('/perfil');
     res.render("login", { titulo: "Iniciar Sesión", error: null });
 });
 
-// Procesar el Login
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     
@@ -69,7 +75,40 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// Cerrar Sesión (Logout)
+router.get("/registro", (req, res) => {
+    res.render("registro", { titulo: "Registro", error: null });
+});
+
+// Procesar el Registro (Crea usuarios con rol 'normal' sin crear el registro de paciente aquí)
+router.post("/registro", async (req, res) => {
+    const { username, password } = req.body;
+    
+    try {
+        const userExists = await Usuario.findOne({ username });
+        if (userExists) {
+            return res.render("registro", { titulo: "Registro", error: "Este nombre de usuario ya está registrado." });
+        }
+        
+        const newUser = new Usuario({
+            username: username,
+            password: password,
+            role: 'normal' 
+        });
+        await newUser.save();
+        
+        // 🔥 BLOQUE ELIMINADO: La creación del paciente ya NO ocurre aquí.
+        // Ocurrirá en la ruta Home si no existe (router.get("/")).
+        
+        req.session.userId = newUser._id;
+        req.session.role = newUser.role;
+        return res.redirect('/perfil');
+        
+    } catch (error) {
+        console.error("Error al registrar nuevo usuario:", error);
+        return res.render("registro", { titulo: "Registro", error: "Error interno al registrarse." });
+    }
+});
+
 router.get('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
@@ -83,13 +122,11 @@ router.get('/logout', (req, res) => {
 
 
 // ===================================================
-// RUTAS PROTEGIDAS Y GESTIÓN DE PERFIL (NUEVO)
+// RUTAS PROTEGIDAS Y GESTIÓN DE PERFIL/FOTO
 // ===================================================
 
-// RUTA DE PERFIL/SESIÓN (Requiere autenticación)
 router.get("/perfil", verificarAutenticacion, async (req, res) => {
     try {
-        // Obtenemos todos los datos del usuario, incluyendo fotoPerfil
         const user = await Usuario.findById(req.session.userId); 
 
         if (!user) {
@@ -98,7 +135,7 @@ router.get("/perfil", verificarAutenticacion, async (req, res) => {
 
         res.render("perfil", { 
             titulo: "Mi Perfil",
-            user: user // Pasamos el objeto completo a la vista
+            user: user 
         });
     } catch (error) {
         console.error("Error al cargar el perfil:", error);
@@ -106,17 +143,14 @@ router.get("/perfil", verificarAutenticacion, async (req, res) => {
     }
 });
 
-// 🎯 NUEVA RUTA: Actualizar la foto de perfil (POST)
 router.post("/perfil/actualizarFoto", verificarAutenticacion, subirArchivo(), async (req, res) => {
     try {
         const userId = req.session.userId;
         
-        // req.file contiene la información del archivo subido por multer
         if (!req.file) {
             return res.redirect('/perfil');
         }
         
-        // Llama a la función de la BD que borra la foto anterior y guarda el nuevo nombre
         await opBD.actualizarFotoPerfil(userId, req.file.filename);
         
         res.redirect('/perfil');
@@ -128,25 +162,74 @@ router.post("/perfil/actualizarFoto", verificarAutenticacion, subirArchivo(), as
 
 
 // ===================================================
-// RUTAS DE ACCESO PÚBLICO y MONTAJE
+// RUTAS DE ADMINISTRACIÓN: GESTIÓN DE ROLES
 // ===================================================
 
-// RUTA HOME 
-router.get("/", (req, res) => {
+router.get("/admin/usuarios", verificarAutenticacion, verificarAdministrador, async (req, res) => {
+    try {
+        const todosUsuarios = await opBD.obtenerTodosUsuarios(); 
+        res.render("adminUsuarios", { 
+            titulo: "Gestión de Roles",
+            usuariosBD: todosUsuarios,
+            usuarioActualId: req.session.userId.toString() 
+        });
+    } catch (error) {
+        console.error("Error al obtener usuarios para admin:", error);
+        res.redirect('/');
+    }
+});
+
+router.post("/admin/actualizar-rol", verificarAutenticacion, verificarAdministrador, async (req, res) => {
+    const { id, rol } = req.body; 
+    
+    try {
+        if (id === req.session.userId.toString()) {
+            return res.redirect('/admin/usuarios'); 
+        }
+
+        await opBD.actualizarRolUsuario(id, rol);
+        res.redirect('/admin/usuarios'); 
+    } catch (error) {
+        console.error("Error al actualizar rol:", error);
+        res.redirect('/admin/usuarios');
+    }
+});
+
+
+// ===================================================
+// RUTAS PÚBLICAS Y MONTAJE CRUD
+// ===================================================
+
+// RUTA HOME (Contiene la lógica de Sincronización)
+router.get("/", async (req, res) => {
     res.locals.role = req.session.role || null; 
     const isAdmin = req.session.role === 'administrador'; 
+
+    // ✅ LÓGICA DE SINCRONIZACIÓN: Crea el registro de paciente solo si no existe
+    if (req.session.userId && !isAdmin) {
+        const pacienteExiste = await opBD.buscarPorID(req.session.userId, 'pacientes');
+        
+        if (!pacienteExiste) {
+            const user = await Usuario.findById(req.session.userId); 
+
+            if (user) {
+                await opBD.crearPaciente({
+                    _id: user._id, 
+                    firstName: user.username, 
+                    lastName: '(Sincronizado)', 
+                });
+            }
+        }
+    }
+    
     res.render("home", { titulo: "Panel Principal", isAdmin: isAdmin });
 });
 
 router.get('/estado', (req, res) => res.send({estado: 'ok', proyecto: 'Clinica Dental Backend'}));
 
-// RUTA ADMINISTRADOR DE EJEMPLO
-router.get("/admin/usuarios", verificarAdministrador, (req, res) => {
-    res.send("<h1>Panel de Administración de Usuarios</h1><p>Solo visible para administradores.</p><a href='/'>Volver</a>");
-});
 
 // RUTA REPORTE (Acceso exclusivo para administradores)
-router.get("/reporte", verificarAdministrador, async (req, res) => {
+router.get("/reporte", verificarAutenticacion, verificarAdministrador, async (req, res) => {
     try {
         const citasBD = await opBD.obtenerCitas();
         const pacientesBD = await opBD.obtenerPacientes();
@@ -157,8 +240,12 @@ router.get("/reporte", verificarAdministrador, async (req, res) => {
     }
 });
 
-// MONTAJE DE RUTAS CRUD (Los archivos rutasP y rutasC contienen toda la lógica)
-router.use('/', rutasP); 
+
+// 🎯 APLICACIÓN DE PROTECCIÓN: Middlewares para rutas CRUD
+router.use('/citas', verificarAutenticacion);
+
+
+// MONTAJE DE RUTAS CRUD (Solo Citas permanece)
 router.use('/', rutasC); 
 
 

@@ -1,27 +1,14 @@
 <%- include("templates/header.ejs", {titulo: "Inicio"}) %>
 
-    <h2 class="text-primary">Panel Administrativo</h2>
-
-<%
-    // Lógica EJS simulando datos dinámicos del servidor
-    var totalPacientes = 32; 
-    var citasHoy = 6;       
-%>
+              <h2 class="text-primary">Panel Administrativo</h2> 
     
     <div class="row mb-5">
+        
         <div class="col-md-4">
             <div class="card text-center bg-light mb-3">
                 <div class="card-body">
-                    <h5 class="card-title">Total de Pacientes Registrados</h5>
-                    <a href="/pacientes" class="btn btn-sm btn-outline-primary">Ver todos los Pacientes</a> 
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center bg-light mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">Citas Programadas</h5>
-                    <a href="/citas" class="btn btn-sm btn-outline-primary">Gestionar Citas (CRUD)</a>
+                    <h5 class="card-title">Citas Programadas para Hoy</h5>
+                    <a href="/citas" class="btn btn-sm btn-outline-primary">Ver Mi Agenda</a>
                 </div>
             </div>
         </div>
@@ -29,9 +16,9 @@
 
 
     <h3 class="mb-3">Enlaces Rápidos a la Gestión</h3>
-      <ul class="list-group mb-5">
-        <li><a href="/citas" class="list-group-item list-group-item-action">Administración de Citas (CRUD)</a></li>
-        <li><a href="/pacientes" class="list-group-item list-group-item-action">Administración de Pacientes (CRUD)</a></li>
-      </ul>
+    <ul class="list-group mb-5">
+                     <li><a href="/citas" class="list-group-item list-group-item-action">Mi Agenda / Citas</a></li>
+                     <li><a href="/reporte" class="list-group-item list-group-item-action">Ver Reporte General</a></li>
+    </ul>
 
-    <%- include("templates/flooter.ejs") %>
+<%- include("templates/flooter.ejs") %>

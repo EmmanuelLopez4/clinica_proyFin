@@ -5,25 +5,113 @@
         
         <div id="msg"></div>
         
-        <form id="apptForm" action="/api/citas" method="POST" class="mb-3">
-            <h4 class="mb-3">Programar Nueva Cita (Agregar)</h4>
-            <div class="row g-2">
-                <div class="col-4"><input class="form-control" name="paciente" placeholder="ID Paciente (pegar)" required></div>
-                <div class="col-4"><input class="form-control" name="dentist" placeholder="Nombre del Odontólogo" required></div>
-                <div class="col-4"><input type="text" class="form-control" name="date" placeholder="dd/mm/aaaa" required></div>
+        <% if (userRole === 'administrador' && busqueda.term === '') { %>
+            <h4 class="mb-3">Buscar Pacientes por Nombre</h4>
+            <form action="/citas" method="GET" class="mb-3">
+                <div class="row g-2">
+                    <div class="col-10">
+                        <input type="text" class="form-control" name="q" placeholder="Ej: Juan Pérez" required>
+                    </div>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-warning w-100">Buscar</button>
+                    </div>
                 </div>
-            <button type="submit" class="btn btn-primary mt-2">Crear Cita</button>
-        </form>
+            </form>
 
+        <% } else if (userRole === 'administrador' && busqueda.term !== '') { %>
+            <h4 class="mb-3">Resultados de Búsqueda ("<%= busqueda.term %>")</h4>
+            <a href="/citas" class="btn btn-sm btn-secondary mb-3">Volver a Mi Agenda</a>
+
+            <% if (busqueda.resultados.length > 0) { %>
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th>Paciente</th><th>ID</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        <% busqueda.resultados.forEach(p => { %>
+                            <tr>
+                                <td><%= p.firstName %> <%= p.lastName %></td>
+                                <td><%= p._id %></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="mostrarFormularioCita('<%= p._id %>', '<%= p.firstName %>')">Agendar Cita</button>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <div class="alert alert-warning">No se encontraron pacientes que coincidan con la búsqueda.</div>
+            <% } %>
+
+        <% } else { %>
+            <h4 class="mb-3">Programar Nueva Cita (Agregar)</h4>
+            <form id="apptForm" action="/api/citas" method="POST" class="mb-3">
+                <div class="row g-2">
+                    <input type="hidden" name="paciente" value="<%= currentUserId %>">
+                    <div class="col-3">
+                        <input type="text" class="form-control bg-light" value="Mi ID Paciente (Automático)" disabled>
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select" name="dentist" required>
+                            <option value="" disabled selected>Seleccione el Doctor</option>
+                            <% doctores.forEach(doctor => { %>
+                                <option value="<%= doctor.username %>"><%= doctor.username %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <input type="text" class="form-control" name="date" placeholder="dd/mm/aaaa" required>
+                    </div>
+                    <div class="col-2">
+                        <input type="text" class="form-control" name="time" placeholder="HH:mm" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">Crear Cita</button>
+            </form>
+
+        <% } %>
         <hr>
 
-        <h4 class="mb-3">Citas Programadas</h4>
+        <script>
+            // Esta función permite al administrador agendar cita a un paciente encontrado
+            function mostrarFormularioCita(pacienteId, pacienteNombre) {
+                // Se podría usar un modal, pero usaremos prompts simples para la funcionalidad
+                const doctorUsername = prompt("Doctor (tu username):");
+                const fecha = prompt("Fecha (dd/mm/aaaa):");
+                const hora = prompt("Hora (HH:mm):");
+
+                if (doctorUsername && fecha && hora) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/api/citas';
+                    
+                    const inputs = [
+                        { name: 'paciente', value: pacienteId },
+                        { name: 'dentist', value: doctorUsername },
+                        { name: 'date', value: fecha },
+                        { name: 'time', value: hora }
+                    ];
+
+                    inputs.forEach(data => {
+                        const input = document.createElement('input');
+                        input.name = data.name;
+                        input.value = data.value;
+                        form.appendChild(input);
+                    });
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
+        </script>
+        
+        <h4 class="mb-3">Agenda Actual</h4>
+        <p class="text-muted">Mostrando <%= userRole === 'administrador' ? 'tu agenda personal' : 'tus citas' %>.</p>
+        
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Odontólogo</th>
+                    <th>Doctor Encargado</th>
                     <th>Paciente</th>
-                    <th>Fecha</th>
+                    <th>Fecha y Hora</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -31,9 +119,17 @@
                 <% citasBD.forEach((cita) => { %>
                 <tr>
                     <td><strong><%= cita.dentist %></strong></td>
-                    <td><%= cita.paciente ? (cita.paciente.firstName + ' ' + cita.paciente.lastName) : 'ID Inválido' %></td>
                     
-                    <td><%= new Date(cita.date).toLocaleDateString('es-ES') %></td> 
+                    <td>
+                        <% if (cita.paciente) { %>
+                            <strong><%= cita.paciente.firstName %></strong>
+                            <br><small>ID: <%= cita.paciente._id %></small>
+                        <% } else { %>
+                            Paciente no asociado
+                        <% } %>
+                    </td>
+                    
+                    <td><%= new Date(cita.date).toLocaleString('es-ES') %></td> 
                     
                     <td>
                         <a href="/citas/editar/<%= cita._id %>" class="btn btn-sm btn-info text-white me-2">Modificar</a>

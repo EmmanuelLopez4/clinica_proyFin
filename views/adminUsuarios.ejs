@@ -1,0 +1,51 @@
+<%- include ("templates/header.ejs", {titulo: "Gestión de Roles"}) %>
+
+    <div class="container my-5">
+        <h2 class="mb-4">👤 Gestión de Roles y Usuarios</h2>
+        <p class="text-muted">Solo los administradores pueden cambiar los roles entre **normal (Paciente)** y **administrador (Doctor)**.</p>
+
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr class="table-dark">
+                    <th>Username</th>
+                    <th>Rol Actual</th>
+                    <th>ID Usuario</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% usuariosBD.forEach((user) => { %>
+                <tr>
+                    <td><strong><%= user.username %></strong></td>
+                    <td>
+                        <span class="badge bg-<%= user.role === 'administrador' ? 'danger' : 'success' %>">
+                            <%= user.role.toUpperCase() %>
+                        </span>
+                    </td>
+                    <td><small><%= user._id %></small></td>
+                    <td>
+                        <% if (user._id.toString() !== usuarioActualId) { %>
+                            <form action="/admin/actualizar-rol" method="POST" style="display:inline;">
+                                <input type="hidden" name="id" value="<%= user._id %>">
+                                
+                                <% if (user.role === 'normal') { %>
+                                    <input type="hidden" name="rol" value="administrador">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Ascender a Admin</button>
+                                <% } else { %>
+                                    <input type="hidden" name="rol" value="normal">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Degradar a Normal</button>
+                                <% } %>
+                            </form>
+                        <% } else { %>
+                            <span class="text-secondary">Tú</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        
+        <a href="/" class="btn btn-secondary mt-3">Volver al Home</a>
+    </div>
+
+<%- include ("templates/flooter.ejs") %>
