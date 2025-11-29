@@ -4,10 +4,6 @@ import Usuario from "../models/usuario.js";
 import fs from 'fs'; 
 import path from 'path'; 
 
-// ===================================
-// LÓGICA DE GESTIÓN DE ARCHIVOS Y ROLES
-// ===================================
-
 export function borrarArchivoFisico(nombreArchivo) {
     if (!nombreArchivo || nombreArchivo === 'perfil_default.png') {
         return; 
@@ -18,10 +14,10 @@ export function borrarArchivoFisico(nombreArchivo) {
     try {
         if (fs.existsSync(rutaArchivo)) {
             fs.unlinkSync(rutaArchivo);
-            console.log(`✅ Archivo eliminado: ${nombreArchivo}`);
+            console.log(`Archivo eliminado: ${nombreArchivo}`);
         }
     } catch (error) {
-        console.error(`❌ Error al borrar el archivo físico ${nombreArchivo}:`, error);
+        console.error(`Error al borrar el archivo físico ${nombreArchivo}:`, error);
     }
 }
 
@@ -53,19 +49,11 @@ export async function actualizarRolUsuario(userId, nuevoRol) {
     return usuarioActualizado;
 }
 
-
-// ===================================
-// CRUD: PACIENTES
-// ===================================
-
-// 🎯 FUNCIÓN DE BÚSQUEDA NUEVA (Usada por el Admin en /citas)
 export async function buscarPacientesPorNombre(nombreBusqueda) {
     if (!nombreBusqueda) return [];
     
-    // Crea una expresión regular para búsqueda insensible a mayúsculas/minúsculas
     const regex = new RegExp(nombreBusqueda, 'i');
     
-    // Busca en firstName (username) o lastName
     const pacientesEncontrados = await Paciente.find({
         $or: [
             { firstName: regex },
@@ -96,11 +84,6 @@ export async function eliminarPaciente(id) {
     const pacienteBD = await Paciente.findByIdAndDelete(id);
     return pacienteBD;
 }
-
-
-// ===================================
-// CRUD: CITAS Y AUXILIARES
-// ===================================
 
 export async function crearCita(datosCita) {
     const cita = new Cita(datosCita);
