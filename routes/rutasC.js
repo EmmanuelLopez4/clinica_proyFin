@@ -5,34 +5,25 @@ import Usuario from "../models/usuario.js";
 
 const rutasC = Router();
 
-// ===================================
-// RUTAS GET (VISTAS)
-// ===================================
-
-// RUTA: Mostrar la tabla de Citas y el formulario de agregar/buscar
 rutasC.get("/citas", async (req, res) => {
     try {
         const userId = req.session.userId;
         const userRole = req.session.role;
-        const searchTerm = req.query.q || ''; // ⬅️ Captura el término de búsqueda
+        const searchTerm = req.query.q || ''; 
         
         let citasBD;
         let resultadosBusqueda = [];
 
         if (userRole === 'administrador') {
-            // 🔥 LÓGICA DE BÚSQUEDA Y AGENDA PARA ADMINISTRADOR
             if (searchTerm) {
-                // Si hay término de búsqueda, busca pacientes
                 resultadosBusqueda = await opBD.buscarPacientesPorNombre(searchTerm);
-                citasBD = []; // No cargamos citas si estamos buscando pacientes
+                citasBD = []; 
             } else {
-                // Si no hay búsqueda, muestra la agenda personal del doctor
                 const user = await Usuario.findById(userId);
                 const doctorUsername = user ? user.username : null; 
                 citasBD = doctorUsername ? await opBD.obtenerCitasPorDoctor(doctorUsername) : [];
             }
         } else {
-            // PACIENTE (Normal): Solo ve SUS citas
             citasBD = await opBD.obtenerCitasPorPaciente(userId); 
         }
         
@@ -44,7 +35,6 @@ rutasC.get("/citas", async (req, res) => {
             currentUserId: userId,
             userRole: userRole,
             doctores: doctoresBD,
-            // 🔥 Pasamos el término y resultados para la vista condicional
             busqueda: { 
                 term: searchTerm,
                 resultados: resultadosBusqueda
@@ -56,7 +46,6 @@ rutasC.get("/citas", async (req, res) => {
     }
 });
 
-// RUTA: Vista para modificar una Cita
 rutasC.get("/citas/editar/:id", async (req, res) => {
     const { id } = req.params;
     try {
@@ -81,12 +70,6 @@ rutasC.get("/citas/editar/:id", async (req, res) => {
     }
 });
 
-
-// ===================================
-// RUTAS API (CRUD)
-// ===================================
-
-// API POST: Crear nueva Cita
 rutasC.post("/api/citas", async (req, res) => {
     const { paciente, dentist, date, time } = req.body; 
     
@@ -109,7 +92,6 @@ rutasC.post("/api/citas", async (req, res) => {
     }
 });
 
-// API POST: Actualizar Cita
 rutasC.post("/api/citas/editar/:id", async (req, res) => {
     const { id } = req.params;
     const { paciente, dentist, date, time } = req.body; 
@@ -137,7 +119,6 @@ rutasC.post("/api/citas/editar/:id", async (req, res) => {
     }
 });
 
-// API POST: Borrar Cita
 rutasC.post("/api/citas/borrar/:id", async (req, res) => {
     const { id } = req.params;
     try {
