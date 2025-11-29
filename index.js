@@ -11,17 +11,15 @@ conectarBD();
 
 const app = express();
 
-// Middlewares y Configuración EJS
 app.set("view engine", "ejs"); 
 app.use(express.urlencoded({extended:true}));
 app.use(express.json()); 
 app.use(cors());         
 app.use(morgan('dev'));  
 
-// Middleware para servir archivos estáticos (las imágenes de perfil)
-app.use(express.static('web')); // ⬅️ ¡ACCESO ESTÁTICO A LA CARPETA 'web'!
 
-// CONFIGURACIÓN DE SESIONES
+app.use(express.static('web'));
+
 app.use(session({
   secret: process.env.SECRET_SESSION, 
   name: process.env.NOMBRE_COOKIE,   
@@ -33,7 +31,6 @@ app.use(session({
   }
 }));
 
-// Router Principal
 app.use("/", rutas); 
 
 const PORT = process.env.PORT || 3000;
