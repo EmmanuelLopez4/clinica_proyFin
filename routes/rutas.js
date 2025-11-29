@@ -6,10 +6,6 @@ import { subirArchivo } from "../middlewares/subirArchivos.js";
 
 const router = Router(); 
 
-// ===================================================
-// UTILIDAD: CONVERSIÓN DE FECHA Y HORA 
-// ===================================================
-
 export function convertirFechaISO(fechaString, horaString) {
     if (!fechaString || !horaString) return null;
     
@@ -20,7 +16,6 @@ export function convertirFechaISO(fechaString, horaString) {
     const mes = partesFecha[1];
     const anio = partesFecha[2];
 
-    // Corregido: Usa la hora local sin la Z
     const fechaISO = new Date(`${anio}-${mes}-${dia}T${horaString}:00`); 
 
     if (isNaN(fechaISO.getTime())) {
@@ -28,11 +23,6 @@ export function convertirFechaISO(fechaString, horaString) {
     }
     return fechaISO;
 }
-
-
-// ===================================================
-// MIDDLEWARE DE AUTENTICACIÓN Y AUTORIZACIÓN 
-// ===================================================
 
 function verificarAutenticacion(req, res, next) {
     if (req.session.userId) {
@@ -50,11 +40,6 @@ function verificarAdministrador(req, res, next) {
         res.redirect('/'); 
     }
 }
-
-
-// ===================================================
-// RUTAS DE AUTENTICACIÓN (LOGIN, REGISTRO, LOGOUT)
-// ===================================================
 
 router.get("/login", (req, res) => {
     if (req.session.userId) return res.redirect('/perfil');
@@ -79,7 +64,6 @@ router.get("/registro", (req, res) => {
     res.render("registro", { titulo: "Registro", error: null });
 });
 
-// Procesar el Registro (Crea usuarios con rol 'normal' sin crear el registro de paciente aquí)
 router.post("/registro", async (req, res) => {
     const { username, password } = req.body;
     
@@ -95,9 +79,6 @@ router.post("/registro", async (req, res) => {
             role: 'normal' 
         });
         await newUser.save();
-        
-        // 🔥 BLOQUE ELIMINADO: La creación del paciente ya NO ocurre aquí.
-        // Ocurrirá en la ruta Home si no existe (router.get("/")).
         
         req.session.userId = newUser._id;
         req.session.role = newUser.role;
@@ -119,11 +100,6 @@ router.get('/logout', (req, res) => {
         res.redirect('/login'); 
     });
 });
-
-
-// ===================================================
-// RUTAS PROTEGIDAS Y GESTIÓN DE PERFIL/FOTO
-// ===================================================
 
 router.get("/perfil", verificarAutenticacion, async (req, res) => {
     try {
@@ -160,11 +136,6 @@ router.post("/perfil/actualizarFoto", verificarAutenticacion, subirArchivo(), as
     }
 });
 
-
-// ===================================================
-// RUTAS DE ADMINISTRACIÓN: GESTIÓN DE ROLES
-// ===================================================
-
 router.get("/admin/usuarios", verificarAutenticacion, verificarAdministrador, async (req, res) => {
     try {
         const todosUsuarios = await opBD.obtenerTodosUsuarios(); 
@@ -195,17 +166,9 @@ router.post("/admin/actualizar-rol", verificarAutenticacion, verificarAdministra
     }
 });
 
-
-// ===================================================
-// RUTAS PÚBLICAS Y MONTAJE CRUD
-// ===================================================
-
-// RUTA HOME (Contiene la lógica de Sincronización)
 router.get("/", async (req, res) => {
     res.locals.role = req.session.role || null; 
     const isAdmin = req.session.role === 'administrador'; 
-
-    // ✅ LÓGICA DE SINCRONIZACIÓN: Crea el registro de paciente solo si no existe
     if (req.session.userId && !isAdmin) {
         const pacienteExiste = await opBD.buscarPorID(req.session.userId, 'pacientes');
         
@@ -227,8 +190,6 @@ router.get("/", async (req, res) => {
 
 router.get('/estado', (req, res) => res.send({estado: 'ok', proyecto: 'Clinica Dental Backend'}));
 
-
-// RUTA REPORTE (Acceso exclusivo para administradores)
 router.get("/reporte", verificarAutenticacion, verificarAdministrador, async (req, res) => {
     try {
         const citasBD = await opBD.obtenerCitas();
@@ -240,12 +201,8 @@ router.get("/reporte", verificarAutenticacion, verificarAdministrador, async (re
     }
 });
 
-
-// 🎯 APLICACIÓN DE PROTECCIÓN: Middlewares para rutas CRUD
 router.use('/citas', verificarAutenticacion);
 
-
-// MONTAJE DE RUTAS CRUD (Solo Citas permanece)
 router.use('/', rutasC); 
 
 
